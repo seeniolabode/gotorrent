@@ -80,3 +80,37 @@ func TestValidMultiFileLayout(t *testing.T) {
 	}
 
 }
+
+func TestSingleFileLayout(t *testing.T) {
+	var file_length int64 = 5
+
+	test_case := Torrent{
+		Info: TorrentInfo{
+			Name:   "My Folder",
+			Length: &file_length,
+		},
+	}
+
+	file_layout, err := BuildFileLayout(test_case, FileLayoutBuilderOptions{
+		DownloadPath: "Downloads",
+	})
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %s", err)
+	}
+
+	if len(file_layout) != 1 {
+		t.Fatalf("Expected a single file in file layout")
+	}
+
+	single_file_layout := file_layout[0]
+
+	if single_file_layout.Length != file_length {
+		t.Fatalf("Expected single file length to be %d", file_length)
+	}
+
+	expected_path := "Downloads/My Folder"
+	if single_file_layout.Path != expected_path {
+		t.Fatalf("Got layout: %s, expected: %s", single_file_layout.Path, expected_path)
+	}
+}
