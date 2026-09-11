@@ -12,8 +12,8 @@ func TestErrorOnInvalidTorrent(t *testing.T) {
 		},
 	}
 
-	_, err := BuildFileLayout(test_case, DirectoryLayoutBuilderOptions{
-		PathPrefix: "Downloads",
+	_, err := BuildFileLayout(test_case, FileLayoutBuilderOptions{
+		DownloadPath: "Downloads",
 	})
 
 	if err == nil {
@@ -41,8 +41,8 @@ func TestValidMultiFileLayout(t *testing.T) {
 		},
 	}
 
-	file_layout, err := BuildFileLayout(test_case, DirectoryLayoutBuilderOptions{
-		PathPrefix: "Downloads",
+	file_layout, err := BuildFileLayout(test_case, FileLayoutBuilderOptions{
+		DownloadPath: "Downloads",
 	})
 
 	if err != nil {

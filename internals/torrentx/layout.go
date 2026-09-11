@@ -2,15 +2,14 @@ package torrentx
 
 import (
 	"errors"
-	"strings"
+	"path/filepath"
 )
 
-type torrent_type int
+type torrentType int
 
 const (
-	single_file_torrent_type torrent_type = iota
-	multi_file_torrent_type
-	unknown_file_torrent_type
+	singleFileTorrent torrentType = iota
+	multiFileTorrent
 )
 
 type FileLayout struct {
@@ -19,39 +18,47 @@ type FileLayout struct {
 	Length int64
 }
 
-type DirectoryLayoutBuilderOptions struct {
-	PathPrefix string
+type FileLayoutBuilderOptions struct {
+	DownloadPath string
 }
 
-func BuildFileLayout(t Torrent, o DirectoryLayoutBuilderOptions) ([]FileLayout, error) {
-	t_type, err := getTorrentType(t)
-
+func BuildFileLayout(t Torrent, opts FileLayoutBuilderOptions) ([]FileLayout, error) {
+	torrentType, err := getTorrentType(t)
 	if err != nil {
-		return []FileLayout{}, err
+		return nil, err
 	}
 
-	if t_type == single_file_torrent_type {
-		single_file_layout := FileLayout{
-			Path:   buildPath([]string{o.PathPrefix, t.Info.Name}),
-			Offset: 0,
-			Length: *t.Info.Length,
-		}
-		return []FileLayout{single_file_layout}, nil
+	if torrentType == singleFileTorrent {
+		return []FileLayout{
+			{
+				Path: filepath.Join(
+					opts.DownloadPath,
+					t.Info.Name,
+				),
+				Offset: 0,
+				Length: *t.Info.Length,
+			},
+		}, nil
 	}
+
+	layout := make([]FileLayout, 0, len(t.Info.Files))
 
 	var offset int64
-	var layout []FileLayout
 
 	for _, file := range t.Info.Files {
-		path := buildPath(append([]string{o.PathPrefix, t.Info.Name}, file.Path...))
+		parts := append(
+			[]string{
+				opts.DownloadPath,
+				t.Info.Name,
+			},
+			file.Path...,
+		)
 
-		file_layout := FileLayout{
-			Path:   path,
+		layout = append(layout, FileLayout{
+			Path:   filepath.Join(parts...),
 			Offset: offset,
 			Length: file.Length,
-		}
-
-		layout = append(layout, file_layout)
+		})
 
 		offset += file.Length
 	}
@@ -59,24 +66,19 @@ func BuildFileLayout(t Torrent, o DirectoryLayoutBuilderOptions) ([]FileLayout, 
 	return layout, nil
 }
 
-func getTorrentType(t Torrent) (torrent_type, error) {
-	info := t.Info
-
-	hasLength := info.Length != nil
-	hasFiles := info.Files != nil
+func getTorrentType(t Torrent) (torrentType, error) {
+	hasLength := t.Info.Length != nil
+	hasFiles := t.Info.Files != nil
 
 	if hasLength == hasFiles {
-		return unknown_file_torrent_type, errors.New("Invalid torrent")
+		return 0, errors.New(
+			"invalid torrent: expected exactly one of length or files",
+		)
 	}
 
 	if hasLength {
-		return single_file_torrent_type, nil
+		return singleFileTorrent, nil
 	}
 
-	return multi_file_torrent_type, nil
-
-}
-
-func buildPath(path []string) string {
-	return strings.Join(path, "/")
+	return multiFileTorrent, nil
 }
