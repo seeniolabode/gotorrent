@@ -12,7 +12,7 @@ const (
 	filePath
 )
 
-func ValidateFileLayout(layout []FileLayout) error {
+func validateFileLayout(layout []FileLayout) error {
 	paths := make(map[string]pathType)
 
 	for i, file := range layout {

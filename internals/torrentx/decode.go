@@ -1,17 +1,42 @@
 package torrentx
 
 import (
+	"bytes"
+	"crypto/sha1"
 	"io"
 
 	bencodego "github.com/jackpal/bencode-go"
 )
 
-func Decode(reader io.Reader) (Torrent, error) {
-	var torrent Torrent
+type rawTorrent struct {
+	Announce     string               `bencode:"announce"`
+	AnnounceList [][]string           `bencode:"announce-list"`
+	RawInfo      bencodego.RawMessage `bencode:"info"`
+}
 
-	if err := bencodego.Unmarshal(reader, &torrent); err != nil {
-		return Torrent{}, err
+func decode(reader io.Reader) (Torrent, [20]byte, error) {
+	var raw rawTorrent
+
+	if err := bencodego.Unmarshal(reader, &raw); err != nil {
+		return Torrent{}, [20]byte{}, err
 	}
 
-	return torrent, nil
+	var info TorrentInfo
+
+	if err := bencodego.Unmarshal(
+		bytes.NewReader(raw.RawInfo),
+		&info,
+	); err != nil {
+		return Torrent{}, [20]byte{}, err
+	}
+
+	torrent := Torrent{
+		Announce:     raw.Announce,
+		AnnounceList: raw.AnnounceList,
+		Info:         info,
+	}
+
+	infoHash := sha1.Sum(raw.RawInfo)
+
+	return torrent, infoHash, nil
 }

@@ -5,12 +5,14 @@ import (
 	"path/filepath"
 )
 
-type torrentType int
+type torrent_file_type int
 
 const (
-	singleFileTorrent torrentType = iota
+	singleFileTorrent torrent_file_type = iota
 	multiFileTorrent
 )
+
+type TorrentFileLayout = []FileLayout
 
 type FileLayout struct {
 	Path   string
@@ -22,7 +24,7 @@ type FileLayoutBuilderOptions struct {
 	DownloadPath string
 }
 
-func BuildFileLayout(t Torrent, opts FileLayoutBuilderOptions) ([]FileLayout, error) {
+func buildFileLayout(t Torrent, opts FileLayoutBuilderOptions) (TorrentFileLayout, error) {
 	torrentType, err := getTorrentType(t)
 	if err != nil {
 		return nil, err
@@ -63,10 +65,16 @@ func BuildFileLayout(t Torrent, opts FileLayoutBuilderOptions) ([]FileLayout, er
 		offset += file.Length
 	}
 
+	err = validateFileLayout(layout)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return layout, nil
 }
 
-func getTorrentType(t Torrent) (torrentType, error) {
+func getTorrentType(t Torrent) (torrent_file_type, error) {
 	hasLength := t.Info.Length != nil
 	hasFiles := t.Info.Files != nil
 
@@ -81,4 +89,9 @@ func getTorrentType(t Torrent) (torrentType, error) {
 	}
 
 	return multiFileTorrent, nil
+}
+
+func totalLenth(l []FileLayout) int64 {
+	last := l[len(l)-1]
+	return last.Offset + last.Length
 }

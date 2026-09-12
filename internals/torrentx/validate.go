@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func ValidateTorrent(t Torrent) error {
+func validateTorrent(t Torrent) error {
 	info := t.Info
 
 	if info.Name == "" {
@@ -23,7 +23,7 @@ func ValidateTorrent(t Torrent) error {
 	}
 
 	hasLength := info.Length != nil
-	hasFiles := info.Files != nil
+	hasFiles := len(info.Files) > 0
 
 	if hasLength == hasFiles {
 		return fmt.Errorf("torrent must contain exactly one of length or files")

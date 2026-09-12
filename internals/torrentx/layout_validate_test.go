@@ -18,7 +18,7 @@ func TestValidateFileLayoutWithCollidingPaths(t *testing.T) {
 		},
 	}
 
-	err := ValidateFileLayout(file_layout)
+	err := validateFileLayout(file_layout)
 
 	if err == nil {
 		t.Fatalf("Expected same path layout to fail")
@@ -39,7 +39,7 @@ func TestValidateFileLayoutCollidingFileAndDirectory(t *testing.T) {
 		},
 	}
 
-	err := ValidateFileLayout(file_layout)
+	err := validateFileLayout(file_layout)
 
 	if err == nil {
 		t.Fatalf("Expected colliding file and directory layout to fail")

@@ -1,11 +1,12 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 
+	"github.com/seeniolabode/gotorrent/internals/fs"
+	"github.com/seeniolabode/gotorrent/internals/p2p/peer"
+	"github.com/seeniolabode/gotorrent/internals/p2p/tracker/udp"
 	"github.com/seeniolabode/gotorrent/internals/torrentx"
 )
 
@@ -17,7 +18,7 @@ type ProgramConfig struct {
 func main() {
 
 	config := ProgramConfig{
-		torrent_path:  "./torrents/Anora (2024) [1080p] [WEBRip] [5.1] [YTS.MX].torrent",
+		torrent_path:  "./torrents/The Beatles-With The Beatles.torrent",
 		download_path: "downloads",
 	}
 
@@ -29,36 +30,39 @@ func main() {
 
 	defer torrent_file.Close()
 
-	torrent, err := torrentx.Decode(torrent_file)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	err = torrentx.ValidateTorrent(torrent)
-
-	if err != nil {
-		log.Fatalf("Invalid torrent: %s", err)
-	}
-
-	file_layout, err := torrentx.BuildFileLayout(torrent, torrentx.FileLayoutBuilderOptions{
-		DownloadPath: config.download_path,
+	torrent, err := torrentx.Parse(torrent_file, torrentx.ParseOptions{
+		PathsPrefix: config.download_path,
 	})
 
 	if err != nil {
-		log.Fatalf("Error: %s", err)
+		log.Fatalf("Error parsing torrent file: %s", err)
 	}
 
-	data, err := json.MarshalIndent(file_layout, "", " ")
+	udpTracker, err := udp.NewUDPTrackerClient(torrent)
+
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatalf("Error creating tracker client: %s", err)
 	}
 
-	fmt.Println(string(data))
+	_, err = udpTracker.Run()
 
-	// if torrent.Info.Length != nil {
-	// 	fmt.Println("Single file torrent")
-	// } else {
-	// 	fmt.Println("Multi file torrent")
-	// }
+	if err != nil {
+		log.Fatalf("Error running torrent tracker: %s", err)
+	}
 
+	p2pClient, err := peer.NewP2PClientFromTracker(udpTracker)
+
+	if err != nil {
+		log.Fatalf("Error creating client from tracker: %s", err)
+	}
+
+	_, err = p2pClient.ConnectSinglePeer()
+
+	if err != nil {
+		log.Fatalf("Error connecting client: %s", err)
+	}
+
+	if err = fs.PrepareFileSystem(torrent.Layout); err != nil {
+		log.Fatalf("Error setting up file layout: %s", err)
+	}
 }
