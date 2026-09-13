@@ -38,7 +38,11 @@ func (c *P2PClient) ConnectSinglePeer() (PeerConnection, error) {
 	return PeerConnection{}, errors.New("could not connect and handshake with any peer")
 }
 
-func NewP2PClientFromTracker(t tracker.Tracker) (*P2PClient, error) {
+func NewP2PClientFromTracker(t tracker.Tracker, assignNextPiece AssignNextPieceHandler) (*P2PClient, error) {
+	if assignNextPiece == nil {
+		return nil, errors.New("no piece assignment handler configured")
+	}
+
 	tracker, err := t.Harvest()
 
 	if err != nil {
@@ -49,9 +53,10 @@ func NewP2PClientFromTracker(t tracker.Tracker) (*P2PClient, error) {
 
 	for i := range tracker.Peers {
 		connected_peers = append(connected_peers, PeerConnection{
-			handshake: nil,
-			conn:      nil,
-			Peer:      tracker.Peers[i],
+			handshake:       nil,
+			conn:            nil,
+			Peer:            tracker.Peers[i],
+			assignNextPiece: assignNextPiece,
 		})
 	}
 
