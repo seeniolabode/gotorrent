@@ -1,9 +1,9 @@
-package peer
+package peers
 
 import (
 	"time"
 
-	"github.com/seeniolabode/gotorrent/internals/p2p/types"
+	"github.com/seeniolabode/gotorrent/internals/types"
 )
 
 const protocol = "BitTorrent protocol"

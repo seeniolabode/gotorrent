@@ -6,10 +6,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/seeniolabode/gotorrent/internals/p2p/peer"
-	"github.com/seeniolabode/gotorrent/internals/p2p/tracker/udp"
+	"github.com/seeniolabode/gotorrent/internals/peers"
 	"github.com/seeniolabode/gotorrent/internals/storage"
 	"github.com/seeniolabode/gotorrent/internals/torrentx"
+	"github.com/seeniolabode/gotorrent/internals/tracker/udp"
 	"github.com/seeniolabode/gotorrent/internals/types"
 )
 
@@ -76,10 +76,10 @@ func main() {
 	}
 	log.Printf("Piece state loaded: total=%d missing=%d", len(storageHandler.Pieces), len(storageHandler.MissingPieces()))
 
-	p2pClient, err := peer.NewP2PClientFromTracker(udpTracker,
-		func(p *peer.PeerConnection) (index, length int, err error) {
+	p2pClient, err := peers.NewPeerManager(udpTracker,
+		func(p *peers.PeerConnection) (index, length int, err error) {
 			for _, pieceIndex := range storageHandler.MissingPieces() {
-				if !peer.HasPiece(p.Bitfield, pieceIndex) {
+				if !peers.HasPiece(p.Bitfield, pieceIndex) {
 					continue
 				}
 
@@ -105,12 +105,12 @@ func main() {
 
 	fmt.Printf("Connected to peer with IP: %s\n", peerConnection.IP)
 
-	err = peerConnection.Use(peer.UseOptions{
-		HandshakeOptions: peer.HandshakeOptions{
+	err = peerConnection.Use(peers.UseOptions{
+		HandshakeOptions: peers.HandshakeOptions{
 			PeerID:   p2pClient.PeerID,
 			InfoHash: torrent.Metadata.InfoHash,
 		},
-		ListenOptions: peer.ListenOptions{
+		ListenOptions: peers.ListenOptions{
 			OnBlock: func(b types.DataBlock) (bool, error) {
 				if err := storageHandler.Store(b); err != nil {
 					return false, err
@@ -120,9 +120,9 @@ func main() {
 
 				return piece.Complete, nil
 			},
-			IsInterested: func(p *peer.PeerConnection) bool {
+			IsInterested: func(p *peers.PeerConnection) bool {
 				for _, piece := range storageHandler.MissingPieces() {
-					if peer.HasPiece(p.Bitfield, piece) {
+					if peers.HasPiece(p.Bitfield, piece) {
 						return true
 					}
 				}

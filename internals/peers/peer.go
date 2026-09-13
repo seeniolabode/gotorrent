@@ -1,4 +1,4 @@
-package peer
+package peers
 
 import (
 	"bytes"
@@ -11,12 +11,11 @@ import (
 	"strconv"
 	"time"
 
-	p2pTypes "github.com/seeniolabode/gotorrent/internals/p2p/types"
-	types "github.com/seeniolabode/gotorrent/internals/types"
+	"github.com/seeniolabode/gotorrent/internals/types"
 )
 
 type PeerConnection struct {
-	p2pTypes.Peer
+	types.Peer
 
 	conn      net.Conn
 	handshake *HandshakeResult
@@ -35,8 +34,8 @@ type PeerConnection struct {
 }
 
 type HandshakeOptions struct {
-	PeerID   p2pTypes.PeerID
-	InfoHash p2pTypes.InfoHash
+	PeerID   types.PeerID
+	InfoHash types.InfoHash
 }
 
 type OnBlockHandler = func(types.DataBlock) (isPieceComplete bool, err error)
@@ -93,11 +92,11 @@ func (p *PeerConnection) Handshake(o HandshakeOptions) error {
 		return nil
 	}
 
-	if o.InfoHash == (p2pTypes.InfoHash{}) {
+	if o.InfoHash == (types.InfoHash{}) {
 		return errors.New("no info hash provided")
 	}
 
-	if o.PeerID == (p2pTypes.PeerID{}) {
+	if o.PeerID == (types.PeerID{}) {
 		return errors.New("no peer ID provided")
 	}
 

@@ -1,7 +1,7 @@
 package tracker
 
 import (
-	"github.com/seeniolabode/gotorrent/internals/p2p/types"
+	"github.com/seeniolabode/gotorrent/internals/types"
 )
 
 type TrackerHarvest struct {

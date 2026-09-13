@@ -1,19 +1,19 @@
-package peer
+package peers
 
 import (
 	"errors"
 
-	"github.com/seeniolabode/gotorrent/internals/p2p/tracker"
-	"github.com/seeniolabode/gotorrent/internals/p2p/types"
+	"github.com/seeniolabode/gotorrent/internals/tracker"
+	"github.com/seeniolabode/gotorrent/internals/types"
 )
 
-type P2PClient struct {
+type PeerManager struct {
 	PeerID   types.PeerID
 	InfoHash types.InfoHash
 	Peers    []PeerConnection
 }
 
-func (c *P2PClient) ConnectSinglePeer() (PeerConnection, error) {
+func (c *PeerManager) ConnectSinglePeer() (PeerConnection, error) {
 	for _, p := range c.Peers {
 		if p.IsConnected() && p.IsHandshaken() {
 			return p, nil
@@ -38,12 +38,12 @@ func (c *P2PClient) ConnectSinglePeer() (PeerConnection, error) {
 	return PeerConnection{}, errors.New("could not connect and handshake with any peer")
 }
 
-func NewP2PClientFromTracker(t tracker.Tracker, assignNextPiece AssignNextPieceHandler) (*P2PClient, error) {
+func NewPeerManager(t tracker.Tracker, assignNextPiece AssignNextPieceHandler) (*PeerManager, error) {
 	if assignNextPiece == nil {
 		return nil, errors.New("no piece assignment handler configured")
 	}
 
-	tracker, err := t.Harvest()
+	trackerHarvest, err := t.Harvest()
 
 	if err != nil {
 		return nil, err
@@ -51,21 +51,21 @@ func NewP2PClientFromTracker(t tracker.Tracker, assignNextPiece AssignNextPieceH
 
 	var connected_peers []PeerConnection
 
-	for i := range tracker.Peers {
+	for i := range trackerHarvest.Peers {
 		connected_peers = append(connected_peers, PeerConnection{
 			handshake:       nil,
 			conn:            nil,
-			Peer:            tracker.Peers[i],
+			Peer:            trackerHarvest.Peers[i],
 			assignNextPiece: assignNextPiece,
 		})
 	}
 
-	client := P2PClient{
-		PeerID:   tracker.PeerID,
-		InfoHash: tracker.Infohash,
+	manager := PeerManager{
+		PeerID:   trackerHarvest.PeerID,
+		InfoHash: trackerHarvest.Infohash,
 		Peers:    connected_peers,
 	}
 
-	return &client, nil
+	return &manager, nil
 
 }

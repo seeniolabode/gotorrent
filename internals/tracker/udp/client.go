@@ -9,9 +9,9 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/seeniolabode/gotorrent/internals/p2p/tracker"
-	"github.com/seeniolabode/gotorrent/internals/p2p/types"
 	"github.com/seeniolabode/gotorrent/internals/torrentx"
+	"github.com/seeniolabode/gotorrent/internals/tracker"
+	"github.com/seeniolabode/gotorrent/internals/types"
 )
 
 const (

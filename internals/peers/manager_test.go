@@ -1,22 +1,22 @@
-package peer
+package peers
 
 import (
 	"errors"
 	"testing"
 
-	"github.com/seeniolabode/gotorrent/internals/p2p/tracker"
-	p2pTypes "github.com/seeniolabode/gotorrent/internals/p2p/types"
+	"github.com/seeniolabode/gotorrent/internals/tracker"
+	"github.com/seeniolabode/gotorrent/internals/types"
 )
 
 type assignmentTracker struct{}
 
 func (assignmentTracker) Harvest() (tracker.TrackerHarvest, error) {
-	return tracker.TrackerHarvest{Peers: make([]p2pTypes.Peer, 2)}, nil
+	return tracker.TrackerHarvest{Peers: make([]types.Peer, 2)}, nil
 }
 
 func TestClientPeersAssignUsingTheirCurrentBitfield(t *testing.T) {
 	noWork := errors.New("no work")
-	client, err := NewP2PClientFromTracker(assignmentTracker{}, func(p *PeerConnection) (int, int, error) {
+	client, err := NewPeerManager(assignmentTracker{}, func(p *PeerConnection) (int, int, error) {
 		for index := 0; index < 8; index++ {
 			if HasPiece(p.Bitfield, index) {
 				return index, 1024, nil
@@ -60,7 +60,7 @@ func TestClientPeersAssignUsingTheirCurrentBitfield(t *testing.T) {
 }
 
 func TestMissingPieceAssignmentHandler(t *testing.T) {
-	if _, err := NewP2PClientFromTracker(assignmentTracker{}, nil); err == nil {
+	if _, err := NewPeerManager(assignmentTracker{}, nil); err == nil {
 		t.Fatal("expected missing handler error")
 	}
 	var p PeerConnection

@@ -3,7 +3,7 @@ package udp
 import (
 	"errors"
 
-	"github.com/seeniolabode/gotorrent/internals/p2p/tracker"
+	"github.com/seeniolabode/gotorrent/internals/tracker"
 )
 
 func (c *UDPTrackerClient) Harvest() (tracker.TrackerHarvest, error) {

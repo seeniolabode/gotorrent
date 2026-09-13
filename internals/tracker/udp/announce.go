@@ -7,8 +7,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/seeniolabode/gotorrent/internals/p2p/tracker"
-	"github.com/seeniolabode/gotorrent/internals/p2p/types"
+	"github.com/seeniolabode/gotorrent/internals/tracker"
+	"github.com/seeniolabode/gotorrent/internals/types"
 )
 
 func (c *UDPTrackerClient) announce() (tracker.TrackingResult, error) {

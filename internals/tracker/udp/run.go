@@ -1,7 +1,7 @@
 package udp
 
 import (
-	"github.com/seeniolabode/gotorrent/internals/p2p/tracker"
+	"github.com/seeniolabode/gotorrent/internals/tracker"
 )
 
 func (c *UDPTrackerClient) Run() (tracker.TrackingResult, error) {
