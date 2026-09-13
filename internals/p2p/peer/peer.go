@@ -290,7 +290,13 @@ func (p *PeerConnection) Listen(o ListenOptions) error {
 
 // updateInterest reacts to availability changes without replacing an active piece.
 func (p *PeerConnection) updateInterest(isInterested IsInterestedHandler) error {
-	if isInterested == nil || !isInterested(p) {
+	if isInterested == nil {
+		log.Printf("Interest check skipped: peer=%s reason=no handler configured", net.JoinHostPort(p.IP.String(), strconv.Itoa(int(p.Port))))
+		return nil
+	}
+	interested := isInterested(p)
+	log.Printf("Peer interest evaluated: peer=%s interested=%t bitfield_bytes=%d", net.JoinHostPort(p.IP.String(), strconv.Itoa(int(p.Port))), interested, len(p.Bitfield))
+	if !interested {
 		return nil
 	}
 
@@ -310,6 +316,7 @@ func (p *PeerConnection) updateInterest(isInterested IsInterestedHandler) error 
 		return p.RequestPiece()
 	}
 
+	log.Printf("Waiting for unchoke: peer=%s piece=%d", net.JoinHostPort(p.IP.String(), strconv.Itoa(int(p.Port))), *p.currentPiece)
 	return nil
 }
 
@@ -327,6 +334,7 @@ func (p *PeerConnection) SendInterested() error {
 
 	if err == nil {
 		p.amInterested = true
+		log.Printf("Interested sent: peer=%s", net.JoinHostPort(p.IP.String(), strconv.Itoa(int(p.Port))))
 	}
 
 	return err
@@ -347,11 +355,24 @@ func (p *PeerConnection) AssignNextPiece() error {
 	p.currentPiece = &pieceIndex
 	p.pieceLength = pieceLength
 	p.nextBegin = 0
+	log.Printf("Piece assigned: peer=%s piece=%d length=%d", net.JoinHostPort(p.IP.String(), strconv.Itoa(int(p.Port))), pieceIndex, pieceLength)
 
 	return nil
 }
 
-func (p *PeerConnection) RequestPiece() error {
+func (p *PeerConnection) RequestPiece() (err error) {
+	address := net.JoinHostPort(p.IP.String(), strconv.Itoa(int(p.Port)))
+	pieceIndex := -1
+	if p.currentPiece != nil {
+		pieceIndex = *p.currentPiece
+	}
+	log.Printf("Piece request attempted: peer=%s piece=%d begin=%d choking=%t", address, pieceIndex, p.nextBegin, p.peerChoking)
+	defer func() {
+		if err != nil {
+			log.Printf("Piece request failed: peer=%s piece=%d begin=%d error=%v", address, pieceIndex, p.nextBegin, err)
+		}
+	}()
+
 	if p.currentPiece == nil {
 		return errors.New("no piece assigned")
 	}

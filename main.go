@@ -63,6 +63,19 @@ func main() {
 		log.Fatalf("Couldn't create storage handler")
 	}
 
+	fmt.Println("Preparing file system")
+
+	if err = storageHandler.PrepareFileSystem(); err != nil {
+		log.Fatalf("Error setting up file layout: %s", err)
+	}
+
+	fmt.Println("File system prepared")
+
+	if err := storageHandler.Load(); err != nil {
+		log.Fatalf("Error loading piece state: %s", err)
+	}
+	log.Printf("Piece state loaded: total=%d missing=%d", len(storageHandler.Pieces), len(storageHandler.MissingPieces()))
+
 	p2pClient, err := peer.NewP2PClientFromTracker(udpTracker,
 		func(p *peer.PeerConnection) (index, length int, err error) {
 			for _, pieceIndex := range storageHandler.MissingPieces() {
@@ -91,14 +104,6 @@ func main() {
 	}
 
 	fmt.Printf("Connected to peer with IP: %s\n", peerConnection.IP)
-
-	fmt.Println("Preparing file system")
-
-	if err = storageHandler.PrepareFileSystem(); err != nil {
-		log.Fatalf("Error setting up file layout: %s", err)
-	}
-
-	fmt.Println("File system prepared")
 
 	err = peerConnection.Use(peer.UseOptions{
 		HandshakeOptions: peer.HandshakeOptions{
