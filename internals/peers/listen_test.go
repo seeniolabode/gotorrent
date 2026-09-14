@@ -42,8 +42,8 @@ func TestListenInterest(t *testing.T) {
 
 				assignments := 0
 				p := PeerConnection{conn: conn, peerChoking: true}
-				p.assignNextPiece = func(requester *PeerConnection) (int, int, error) {
-					if requester != &p || !HasPiece(requester.Bitfield, 0) {
+				p.assignNextPiece = func(b []byte) (int, int, error) {
+					if !HasPiece(b, 0) {
 						t.Fatal("selector received incorrect peer state")
 					}
 					assignments++
@@ -84,7 +84,7 @@ func TestInterestAssignmentError(t *testing.T) {
 	conn.queue(MessageBitfield, 0x80)
 	selectionErr := errors.New("selection failed")
 	p := PeerConnection{conn: conn, peerChoking: true,
-		assignNextPiece: func(*PeerConnection) (int, int, error) { return 0, 0, selectionErr },
+		assignNextPiece: func([]byte) (int, int, error) { return 0, 0, selectionErr },
 	}
 	err := p.Listen(ListenOptions{IsInterested: func(*PeerConnection) bool { return true }})
 	if !errors.Is(err, selectionErr) {

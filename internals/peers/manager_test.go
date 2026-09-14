@@ -16,9 +16,9 @@ func (assignmentTracker) Harvest() (tracker.TrackerHarvest, error) {
 
 func TestClientPeersAssignUsingTheirCurrentBitfield(t *testing.T) {
 	noWork := errors.New("no work")
-	client, err := NewPeerManager(assignmentTracker{}, func(p *PeerConnection) (int, int, error) {
+	client, err := NewPeerManager(assignmentTracker{}, func(b []byte) (int, int, error) {
 		for index := 0; index < 8; index++ {
-			if HasPiece(p.Bitfield, index) {
+			if HasPiece(b, index) {
 				return index, 1024, nil
 			}
 		}

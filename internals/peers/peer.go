@@ -44,7 +44,7 @@ type OnBlockHandler = func(types.DataBlock) (isPieceComplete bool, err error)
 type IsInterestedHandler = func(*PeerConnection) bool
 
 // AssignNextPieceHandler selects work using the requesting peer’s current state.
-type AssignNextPieceHandler = func(*PeerConnection) (piece, pieceLength int, err error)
+type AssignNextPieceHandler = func([]byte) (piece, pieceLength int, err error)
 
 type ListenOptions struct {
 	OnBlock      OnBlockHandler
@@ -346,7 +346,7 @@ func (p *PeerConnection) AssignNextPiece() error {
 		return errors.New("no piece assignment handler configured")
 	}
 
-	pieceIndex, pieceLength, err := p.assignNextPiece(p)
+	pieceIndex, pieceLength, err := p.assignNextPiece(p.Bitfield)
 	if err != nil {
 		return err
 	}
