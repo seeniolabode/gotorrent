@@ -39,6 +39,9 @@ func (c *PeerManager) ConnectSinglePeer() (PeerConnection, error) {
 }
 
 func NewPeerManager(t tracker.Tracker, assignNextPiece AssignNextPieceHandler) (*PeerManager, error) {
+	if assignNextPiece == nil {
+		return nil, errors.New("missing piece assignment handler")
+	}
 	trackerHarvest, err := t.Harvest()
 
 	if err != nil {

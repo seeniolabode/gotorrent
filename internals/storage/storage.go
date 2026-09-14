@@ -9,19 +9,24 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/seeniolabode/gotorrent/internals/torrentx"
 	"github.com/seeniolabode/gotorrent/internals/types"
 )
 
+// Storage serializes state and file operations. Use Piece for concurrent snapshots;
+// direct access to Pieces is only safe while no operations are running.
+// A Storage must not be copied after first use.
 type Storage struct {
+	mu            sync.Mutex
 	Pieces        []PieceState
 	ParsedTorrent torrentx.ParsedTorrent
 }
 
 // Read
 
-func (s *Storage) Load() error {
+func (s *Storage) load() error {
 	if len(s.ParsedTorrent.Layout) == 0 {
 		return errors.New("empty torrent")
 	}
@@ -43,7 +48,7 @@ func (s *Storage) Load() error {
 
 		data := make([]byte, pieceLength)
 
-		if err := s.ReadAt(data, pieceOffset); err != nil {
+		if err := s.readAt(data, pieceOffset); err != nil {
 			return fmt.Errorf("read piece %d: %w", i, err)
 		}
 
@@ -66,7 +71,7 @@ func (s *Storage) Load() error {
 	return nil
 }
 
-func (s *Storage) ReadAt(buf []byte, offset int64) error {
+func (s *Storage) readAt(buf []byte, offset int64) error {
 	if len(s.ParsedTorrent.Layout) == 0 {
 		return errors.New("empty torrent")
 	}
@@ -140,7 +145,7 @@ func (s *Storage) ReadAt(buf []byte, offset int64) error {
 	return io.ErrUnexpectedEOF
 }
 
-func (s *Storage) HasPiece(pieceIndex int) bool {
+func (s *Storage) hasPiece(pieceIndex int) bool {
 	if pieceIndex < 0 || pieceIndex >= len(s.Pieces) {
 		return false
 	}
@@ -148,7 +153,7 @@ func (s *Storage) HasPiece(pieceIndex int) bool {
 	return s.Pieces[pieceIndex].Complete
 }
 
-func (s *Storage) MissingPieces() []int {
+func (s *Storage) missingPieces() []int {
 	var missing []int
 
 	for _, piece := range s.Pieces {
@@ -162,7 +167,7 @@ func (s *Storage) MissingPieces() []int {
 
 // Write
 
-func (s *Storage) Store(block types.DataBlock) error {
+func (s *Storage) store(block types.DataBlock) error {
 	if block.PieceIndex < 0 || block.PieceIndex >= len(s.Pieces) {
 		return fmt.Errorf(
 			"invalid piece index: %d",
@@ -233,7 +238,7 @@ func (s *Storage) Store(block types.DataBlock) error {
 		pieceOffset +
 			int64(block.Begin)
 
-	if err := s.WriteAt(block.Data, blockOffset); err != nil {
+	if err := s.writeAt(block.Data, blockOffset); err != nil {
 		return fmt.Errorf(
 			"write piece %d block %d: %w",
 			block.PieceIndex,
@@ -243,6 +248,7 @@ func (s *Storage) Store(block types.DataBlock) error {
 	}
 
 	blockState.Received = true
+	blockState.Requested = false
 	log.Printf("Block written: piece=%d begin=%d length=%d", block.PieceIndex, block.Begin, len(block.Data))
 
 	if !pieceHasAllBlocksReceived(piece) {
@@ -259,6 +265,7 @@ func (s *Storage) Store(block types.DataBlock) error {
 
 		for i := range piece.Blocks {
 			piece.Blocks[i].Received = false
+			piece.Blocks[i].Requested = false
 		}
 
 		return fmt.Errorf(
@@ -273,7 +280,7 @@ func (s *Storage) Store(block types.DataBlock) error {
 	return nil
 }
 
-func (s *Storage) WriteAt(data []byte, offset int64) error {
+func (s *Storage) writeAt(data []byte, offset int64) error {
 	if len(s.ParsedTorrent.Layout) == 0 {
 		return errors.New("empty torrent")
 	}
@@ -414,7 +421,7 @@ func (s *Storage) verifyPiece(pieceIndex int) (bool, error) {
 		int64(pieceIndex) *
 			s.ParsedTorrent.Torrent.Info.PieceLength
 
-	if err := s.ReadAt(data, pieceOffset); err != nil {
+	if err := s.readAt(data, pieceOffset); err != nil {
 		return false, fmt.Errorf(
 			"read piece %d for verification: %w",
 			pieceIndex,
@@ -447,7 +454,7 @@ func (s *Storage) verifyPiece(pieceIndex int) (bool, error) {
 
 // Utils
 
-func (s *Storage) PrepareFileSystem() error {
+func (s *Storage) prepareFileSystem() error {
 	for _, file := range s.ParsedTorrent.Layout {
 		dir := filepath.Dir(file.Path)
 
@@ -515,4 +522,46 @@ func NewStorageHandler(t torrentx.ParsedTorrent) (*Storage, error) {
 	}
 
 	return &s, nil
+}
+
+func (s *Storage) Load() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.load()
+}
+
+func (s *Storage) Store(block types.DataBlock) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.store(block)
+}
+
+func (s *Storage) ReadAt(buf []byte, offset int64) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.readAt(buf, offset)
+}
+
+func (s *Storage) WriteAt(data []byte, offset int64) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.writeAt(data, offset)
+}
+
+func (s *Storage) HasPiece(pieceIndex int) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.hasPiece(pieceIndex)
+}
+
+func (s *Storage) MissingPieces() []int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.missingPieces()
+}
+
+func (s *Storage) PrepareFileSystem() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.prepareFileSystem()
 }

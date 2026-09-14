@@ -177,6 +177,9 @@ func (p *PeerConnection) ReadMessage() (*Message, error) {
 		return nil, nil
 	}
 
+	if length > 1024*1024 {
+		return nil, errors.New("peer message exceeds size limit")
+	}
 	messageBuf := make([]byte, length)
 
 	if _, err := io.ReadFull(p.conn, messageBuf); err != nil {
